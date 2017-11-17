@@ -296,6 +296,7 @@ sys_open(void)
 
   begin_op();
 
+  //create a file
   if(omode & O_CREATE){
     ip = create(path, T_FILE, 0, 0);
     if(ip == 0){
@@ -303,19 +304,19 @@ sys_open(void)
       return -1;
     }
   } else {
-    if((ip = namei(path)) == 0){
+    if((ip = namei(path)) == 0){ //file doesn't exist
       end_op();
       return -1;
     }
     ilock(ip);
-    if(ip->type == T_DIR && omode != O_RDONLY){
+    if(ip->type == T_DIR && omode != O_RDONLY){ //can't open directories for write
       iunlockput(ip);
       end_op();
       return -1;
     }
   }
 
-  if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
+  if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){ 
     if(f)
       fileclose(f);
     iunlockput(ip);
