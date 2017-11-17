@@ -120,7 +120,7 @@ sys_fstat(void)
     cprintf("Number of Link: %d\n", st->nlink);
     cprintf("Size: %d\n", st->size);
   }
-  
+
   return filestat(f, st);
 }
 
@@ -251,23 +251,29 @@ bad:
 static struct inode*
 create(char *path, short type, short major, short minor)
 {
-  uint off;
-  struct inode *ip, *dp;
-  char name[DIRSIZ];
+  uint off; //pointer offset
+  struct inode *ip, *dp; //inode and directory pointers
+  char name[DIRSIZ]; 
 
+  //get parent inode is null, then return 
   if((dp = nameiparent(path, name)) == 0)
     return 0;
   ilock(dp);
 
+  
   if((ip = dirlookup(dp, name, &off)) != 0){
+    //inode is not 0
     iunlockput(dp);
     ilock(ip);
-    if(type == T_FILE && ip->type == T_FILE)
+    //return inode if it's of type file or extent
+    if((type == T_FILE && ip->type == T_FILE) || (type == T_EXTENT && ip->type == T_EXTENT))
       return ip;
     iunlockput(ip);
     return 0;
   }
 
+  //THIS IS WHERE ALL THE MAGIC HAPPENS
+  // Make the inode with the given type
   if((ip = ialloc(dp->dev, type)) == 0)
     panic("create: ialloc");
 
@@ -306,14 +312,18 @@ sys_open(void)
 
   begin_op();
 
-  //create a file
-  if(omode & O_CREATE){
+  if((omode & O_EXTENT) && (omode && O_CREATE)){ //
+    if((ip = create(path, T_EXTENT,0,0))==0){
+      end_op()
+      return -1 //cannot create a new file of type extent 
+    }
+  } else if(omode & O_CREATE){ //create regular file
     ip = create(path, T_FILE, 0, 0);
     if(ip == 0){
       end_op();
       return -1;
     }
-  } else {
+  } else { //not creating a file, reading/writing to an existing one
     if((ip = namei(path)) == 0){ //file doesn't exist
       end_op();
       return -1;
@@ -453,4 +463,49 @@ sys_pipe(void)
   fd[0] = fd0;
   fd[1] = fd1;
   return 0;
+}
+
+
+create(char *path, short type, short major, short minor)
+{
+  uint off;
+  struct inode *ip, *dp;	// inode pointer?, directory pointer
+  char name[DIRSIZ];
+
+  if((dp = nameiparent(path, name)) == 0)	// get parent inode to the file with given path
+    return 0;
+  ilock(dp);
+
+  if((ip = dirlookup(dp, name, &off)) != 0){	// get directory inode 
+    iunlockput(dp);
+    ilock(ip);
+    if((type == T_FILE && ip->type == T_FILE) || (type == T_EXTENT && ip->type == T_EXTENT)) {
+      return ip;
+    }
+    iunlockput(ip);
+    return 0;
+  }
+
+  if((ip = ialloc(dp->dev, type)) == 0)	// allocate inode
+    panic("create: ialloc");
+
+  ilock(ip);
+  ip->major = major;
+  ip->minor = minor;
+  ip->nlink = 1;
+  iupdate(ip);
+
+  if(type == T_DIR){  // Create . and .. entries.
+    dp->nlink++;  // for ".."
+    iupdate(dp);
+    // No ip->nlink++ for ".": avoid cyclic ref count.
+    if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
+      panic("create dots");
+  }
+
+  if(dirlink(dp, name, ip->inum) < 0)	// create new entry (ip) in directory (dp)
+    panic("create: dirlink");
+
+  iunlockput(dp);
+  return ip;
 }
