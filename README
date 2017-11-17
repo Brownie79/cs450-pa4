@@ -3,3 +3,10 @@ Dev Bharel, Chris Sanders, Hayoung Lim
 1) Add the O_EXTENT Flag 
 - Stat.h: keeps track of the metadata of the files
     - added T_EXTENT 4 for a new type of file to be recognized by the system
+- fcntl.h: [We don't know what this does, but assumes these are random flags that have to be unique]
+    - added O_EXTENT as flag 0x010
+
+
+2) Change fstat() to dump extent info:
+    - added print statements in fstat() @ sysfile.c to print extent file type info when it's called
+    

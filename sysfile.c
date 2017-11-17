@@ -111,6 +111,16 @@ sys_fstat(void)
 
   if(argfd(0, 0, &f) < 0 || argptr(1, (void*)&st, sizeof(*st)) < 0)
     return -1;
+  
+  //Print Extent Info
+  if(st->type == T_EXTENT){
+    cprintf("Type: %s\n", st->type);
+    cprintf("Device: %d\n", st->dev);
+    cprintf("Inode #: %d\n", st->ino);
+    cprintf("Number of Link: %d\n", st->nlink);
+    cprintf("Size: %d\n", st->size);
+  }
+  
   return filestat(f, st);
 }
 
