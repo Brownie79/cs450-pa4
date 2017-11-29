@@ -3,10 +3,13 @@
 #define T_DEV  3   // Device
 #define T_EXTENT 4 // Extent File
 
+#define NDIRECT 12
+
 struct stat {
   short type;  // Type of file
   int dev;     // File system's disk device
   uint ino;    // Inode number
   short nlink; // Number of links to file
   uint size;   // Size of file in bytes
+  uint addrs[NDIRECT+1]; //Data block addresses
 };

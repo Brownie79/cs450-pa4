@@ -112,15 +112,6 @@ sys_fstat(void)
   if(argfd(0, 0, &f) < 0 || argptr(1, (void*)&st, sizeof(*st)) < 0)
     return -1;
   
-  //Print Extent Info
-  if(st->type == T_EXTENT){
-    cprintf("Type: %s\n", st->type);
-    cprintf("Device: %d\n", st->dev);
-    cprintf("Inode #: %d\n", st->ino);
-    cprintf("Number of Link: %d\n", st->nlink);
-    cprintf("Size: %d\n", st->size);
-  }
-
   return filestat(f, st);
 }
 
@@ -312,10 +303,10 @@ sys_open(void)
 
   begin_op();
 
-  if((omode & O_EXTENT) && (omode && O_CREATE)){ //
+  if((omode & O_EXTENT) && (omode && O_CREATE)){ //create extent-based file
     if((ip = create(path, T_EXTENT,0,0))==0){
-      end_op()
-      return -1 //cannot create a new file of type extent 
+      end_op();
+      return -1; //cannot create a new file of type extent 
     }
   } else if(omode & O_CREATE){ //create regular file
     ip = create(path, T_FILE, 0, 0);
@@ -350,7 +341,7 @@ sys_open(void)
   f->ip = ip;
   f->off = 0;
   f->readable = !(omode & O_WRONLY);
-  f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+  f->writable = ((omode & O_WRONLY) || (omode & O_RDWR));
   return fd;
 }
 
@@ -463,49 +454,4 @@ sys_pipe(void)
   fd[0] = fd0;
   fd[1] = fd1;
   return 0;
-}
-
-
-create(char *path, short type, short major, short minor)
-{
-  uint off;
-  struct inode *ip, *dp;	// inode pointer?, directory pointer
-  char name[DIRSIZ];
-
-  if((dp = nameiparent(path, name)) == 0)	// get parent inode to the file with given path
-    return 0;
-  ilock(dp);
-
-  if((ip = dirlookup(dp, name, &off)) != 0){	// get directory inode 
-    iunlockput(dp);
-    ilock(ip);
-    if((type == T_FILE && ip->type == T_FILE) || (type == T_EXTENT && ip->type == T_EXTENT)) {
-      return ip;
-    }
-    iunlockput(ip);
-    return 0;
-  }
-
-  if((ip = ialloc(dp->dev, type)) == 0)	// allocate inode
-    panic("create: ialloc");
-
-  ilock(ip);
-  ip->major = major;
-  ip->minor = minor;
-  ip->nlink = 1;
-  iupdate(ip);
-
-  if(type == T_DIR){  // Create . and .. entries.
-    dp->nlink++;  // for ".."
-    iupdate(dp);
-    // No ip->nlink++ for ".": avoid cyclic ref count.
-    if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
-      panic("create dots");
-  }
-
-  if(dirlink(dp, name, ip->inum) < 0)	// create new entry (ip) in directory (dp)
-    panic("create: dirlink");
-
-  iunlockput(dp);
-  return ip;
 }

@@ -444,7 +444,12 @@ stati(struct inode *ip, struct stat *st)
   st->ino = ip->inum;
   st->type = ip->type;
   st->nlink = ip->nlink;
-  st->size = ip->size;
+  st->size = ip->size; //Original
+
+  int i;
+  for (i = 0; i < NDIRECT + 1; ++i){
+    st->addrs[i] = ip->addrs[i]; //copy data block addresses
+  } 
 }
 
 //PAGEBREAK!

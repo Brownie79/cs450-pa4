@@ -9,6 +9,7 @@
 #include "spinlock.h"
 #include "sleeplock.h"
 #include "file.h"
+#include "stat.h"
 
 struct devsw devsw[NDEV];
 struct {
@@ -85,8 +86,28 @@ filestat(struct file *f, struct stat *st)
 {
   if(f->type == FD_INODE){
     ilock(f->ip);
-    stati(f->ip, st);
+    stati(f->ip, st); //copy the stat info from inode
     iunlock(f->ip);
+
+
+    //print stat info
+    cprintf("Type: %s\n", st->type);
+    cprintf("Device: %d\n", st->dev);
+    cprintf("Inode #: %d\n", st->ino);
+    cprintf("Number of Link: %d\n", st->nlink);
+    cprintf("Size: %d\n", st->size);
+
+    if(st->type == T_EXTENT) { //extent-based file
+      int i = 0;
+      while(st->addrs[i] && i < NDIRECT+1){
+        //first 3 byte is pointer and remaining 1 byte is length
+        //0xff = 00000000 00000000 00000000 11111111
+        cprintf("For extent-based file, data block #%d\n", i);
+        cprintf("Pointer: %x\n", ((st->addrs[i] & ~0xff) >> 8));
+        cprintf("Length: %d (blocks)\n", (st->addrs[i] & 0xff));
+        ++i;
+      }
+    }
     return 0;
   }
   return -1;
