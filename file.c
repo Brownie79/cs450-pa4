@@ -89,9 +89,15 @@ filestat(struct file *f, struct stat *st)
     stati(f->ip, st); //copy the stat info from inode
     iunlock(f->ip);
 
-
+    char *filetype = "";
+    if(st->type == T_EXTENT) {
+      filetype = "extent-based file";
+    }else{
+      filetype = "pointer-based file";
+    }
+    
     //print stat info
-    cprintf("Type: %s\n", st->type);
+    cprintf("Type: %s\n", filetype);
     cprintf("Device: %d\n", st->dev);
     cprintf("Inode #: %d\n", st->ino);
     cprintf("Number of Link: %d\n", st->nlink);
@@ -102,12 +108,12 @@ filestat(struct file *f, struct stat *st)
       while(st->addrs[i] && i < NDIRECT+1){
         //first 3 byte is pointer and remaining 1 byte is length
         //0xff = 00000000 00000000 00000000 11111111
-        cprintf("For extent-based file, data block #%d\n", i);
         cprintf("Pointer: %x\n", ((st->addrs[i] & ~0xff) >> 8));
         cprintf("Length: %d (blocks)\n", (st->addrs[i] & 0xff));
         ++i;
       }
     }
+    
     return 0;
   }
   return -1;

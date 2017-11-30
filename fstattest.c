@@ -4,52 +4,42 @@
 #include "fs.h"
 #include "stat.h"
 
-#define assert(x) if (x) {/* pass */} else { \
-  printf(1, "assert failed %s %s %d\n", #x , __FILE__, __LINE__); \
-  exit(); \
-  }
-
-char * testname = "fstat";
-char buf[512];
-struct stat st;
 
 int main(int argc, char *argv[]){
 
-  int fd, status;
-
-  memset(buf, 0, 512);
-
-  unlink("fstat_test_file");
   //create a new test file
-  fd = open("fstat_test_file", O_CREATE | O_WRONLY | O_EXTENT);
-  assert(fd != -1);
+  int fd = open("fstat_test", O_CREATE | O_RDWR | O_EXTENT);
+  int regularFd = open("fstat_test_reg", O_CREATE | O_RDWR);
+  struct stat st;
 
+  printf(1, "In this test, we are comparing pointer-based file and extent-based file!\n\n");
+  
+  //Initial value
+  printf(1, "Initial value when you open a new file!\n");
+  printf(1, "When you use pointer-based file\n");
+  fstat(regularFd, &st);
+  printf(1, "\nWhen you use extent-based file\n");
+  fstat(fd, &st);
+  printf(1, "\n");
+
+  printf(1, "Let's write something!\n");
+  //Write something on
   int i;
-  for (i = 0; i< 10; i++){
-    buf[0] = i;
-    status = write(fd, buf, 512);
-    assert(status != -1);
+  for(i = 1; i < 4; i++){
+    char *newline = "We are adding new line! This line is long!\n"; 
+    write(fd, newline, strlen(newline));
+    write(regularFd, newline, strlen(newline));
+
+    printf(1, "\n\nAfter adding %dth line..\n", i);
+    printf(1, "pointer-based file\n");
+    fstat(regularFd, &st);
+    printf(1, "\nextent-based file\n");
     fstat(fd, &st);
+    
   }
-
-  status = close(fd);
-  assert(status != -1);
-  fstat(fd, &st);
-
-  int pid = fork();
-  if (pid == 0){
-    printf(1, "Output from stat: \n");
-    char * args[] = {"stat", "fstat_test_file", 0};
-    exec(args[0], args);
-    exit();
-  } else {
-    wait();
-    printf(1, "\n");
-  }
-
-  fd = open("fstat_test_file", O_RDONLY);
-  assert(fd != -1);
-  fstat(fd, &st);
+  
+  close(fd);
+  close(regularFd);
   exit();
-
 }
+  
