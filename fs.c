@@ -232,6 +232,7 @@ iupdate(struct inode *ip)
   dip->nlink = ip->nlink;
   dip->size = ip->size;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
+  memmove(dip->logicalOffsets, ip->logicalOffsets, sizeof(ip->logicalOffsets));
   log_write(bp);
   brelse(bp);
 }
@@ -305,6 +306,7 @@ ilock(struct inode *ip)
     ip->nlink = dip->nlink;
     ip->size = dip->size;
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
+    memmove(ip->logicalOffsets, dip->logicalOffsets, sizeof(ip->logicalOffsets));
     brelse(bp);
     ip->valid = 1;
     if(ip->type == 0)
@@ -370,38 +372,8 @@ iunlockput(struct inode *ip)
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
-static uint
-bmap(struct inode *ip, uint bn)
-{
-  uint addr, *a;
-  struct buf *bp;
-
-  if(bn < NDIRECT){
-    if((addr = ip->addrs[bn]) == 0)
-      ip->addrs[bn] = addr = balloc(ip->dev);
-    return addr;
-  }
-  bn -= NDIRECT;
-
-  if(bn < NINDIRECT){
-    // Load indirect block, allocating if necessary.
-    if((addr = ip->addrs[NDIRECT]) == 0)
-      ip->addrs[NDIRECT] = addr = balloc(ip->dev);
-    bp = bread(ip->dev, addr);
-    a = (uint*)bp->data;
-    if((addr = a[bn]) == 0){
-      a[bn] = addr = balloc(ip->dev);
-      log_write(bp);
-    }
-    brelse(bp);
-    return addr;
-  }
-
-  panic("bmap: out of range");
-}
-
 static uint bmap(struct inode *ip, uint bn){
-  uint addr, a*;
+  uint addr, *a;
   struct buf *bp;
 
   //EXTENT
@@ -457,10 +429,6 @@ static uint bmap(struct inode *ip, uint bn){
   
     panic("bmap: out of range");
   }
-
-
-
-
 
 }
 
