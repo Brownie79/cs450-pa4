@@ -400,6 +400,70 @@ bmap(struct inode *ip, uint bn)
   panic("bmap: out of range");
 }
 
+static uint bmap(struct inode *ip, uint bn){
+  uint addr, a*;
+  struct buf *bp;
+
+  //EXTENT
+  if(ip->type == T_EXTENT){
+    int n = 0;
+    while(ip->addrs[n]){
+      //Offset <= bn < offset + size
+      if(ip->logicalOffsets[n] <= bn &&
+         ip->logicalOffsets[n] + getSize(ip->addrs[n])>bn){
+          return getPtr(ip->addrs[n]) + (bn - ip->logicalOffsets[n]);
+         }
+         n = n + 1;
+    }
+    //Doesn't Exist, so create it
+    uint newBlockAddress = balloc(ip->dev);
+    if(n>0){
+      n = n - 1;
+      //Return block if we can add it to the extent block
+      if((getPtr(ip->addrs[n]) + (getSize(ip->addrs[n])) == newBlockAddress) && getSize(ip->addrs[n]) < 255)
+      {
+        ip->addrs[n] = toAddr(getPtr(ip->addrs[n]), getSize(ip->addrs[n]) + 1);
+        return newBlockAddress;
+      }
+      ++n;
+    }
+    //Create New Block at n
+    ip->addrs[n] = toAddr(newBlockAddress,1);
+    ip->logicalOffsets[n] = bn;
+    return newBlockAddress;
+  } 
+  //NORMAL INODE
+  else {
+    if(bn < NDIRECT){
+      if((addr = ip->addrs[bn]) == 0)
+        ip->addrs[bn] = addr = balloc(ip->dev);
+      return addr;
+    }
+    bn -= NDIRECT;
+  
+    if(bn < NINDIRECT){
+      // Load indirect block, allocating if necessary.
+      if((addr = ip->addrs[NDIRECT]) == 0)
+        ip->addrs[NDIRECT] = addr = balloc(ip->dev);
+      bp = bread(ip->dev, addr);
+      a = (uint*)bp->data;
+      if((addr = a[bn]) == 0){
+        a[bn] = addr = balloc(ip->dev);
+        log_write(bp);
+      }
+      brelse(bp);
+      return addr;
+    }
+  
+    panic("bmap: out of range");
+  }
+
+
+
+
+
+}
+
 // Truncate inode (discard contents).
 // Only called when the inode has no links
 // to it (no directory entries referring to it)
@@ -412,27 +476,40 @@ itrunc(struct inode *ip)
   struct buf *bp;
   uint *a;
 
-  for(i = 0; i < NDIRECT; i++){
-    if(ip->addrs[i]){
-      bfree(ip->dev, ip->addrs[i]);
-      ip->addrs[i] = 0;
-    }
-  }
 
-  if(ip->addrs[NDIRECT]){
-    bp = bread(ip->dev, ip->addrs[NDIRECT]);
-    a = (uint*)bp->data;
-    for(j = 0; j < NINDIRECT; j++){
-      if(a[j])
-        bfree(ip->dev, a[j]);
+  //EXTENT HANDLING
+  if(ip->type == T_EXTENT){
+    for(i=0; i<NDIRECT; i++){
+      if(ip->addrs[i]){
+        for(j=0; j<getSize(ip->addrs[i]); ++j ){
+          bfree(ip->dev, getPtr(ip->addrs[i]) + j*BSIZE);
+        }
+      }
     }
-    brelse(bp);
-    bfree(ip->dev, ip->addrs[NDIRECT]);
-    ip->addrs[NDIRECT] = 0;
+  } else {
+  // NORMAL BLOCK HANDLING  
+    for(i = 0; i < NDIRECT; i++){
+      if(ip->addrs[i]){
+        bfree(ip->dev, ip->addrs[i]);
+        ip->addrs[i] = 0;
+      }
+    }
+  
+    if(ip->addrs[NDIRECT]){
+      bp = bread(ip->dev, ip->addrs[NDIRECT]);
+      a = (uint*)bp->data;
+      for(j = 0; j < NINDIRECT; j++){
+        if(a[j])
+          bfree(ip->dev, a[j]);
+      }
+      brelse(bp);
+      bfree(ip->dev, ip->addrs[NDIRECT]);
+      ip->addrs[NDIRECT] = 0;
+    }
+  
+    ip->size = 0;
+    iupdate(ip);
   }
-
-  ip->size = 0;
-  iupdate(ip);
 }
 
 // Copy stat information from inode.

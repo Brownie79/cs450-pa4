@@ -8,10 +8,11 @@ Dev Bharel, Chris Sanders, Hayoung Lim
 - Sysfile.c: keeps track of the system files
     - open(): added a check to see if new file of extent needs to created vs a regular file
     - create(): allows you to open files of type T_EXTENT
-
+- fs.c: 
+    - bmap() : added handling for allocating new blocks for extents
+    - itrunc(): added handling for truncating (discarding) extent blocks
+- ls.c
+    - added case for Extent files when printing to show their data (same as regular files, but since thier type is different, needed to be there)
 2) Change fstat() to dump extent info:
     - added print statements in fstat() @ sysfile.c to print extent file type info when it's called
 
-
-
-https://github.com/rschmukler/cs537-p5/tree/master/xv6
