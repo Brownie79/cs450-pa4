@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
   int regularFd2 = open("extent_test_reg2", O_CREATE | O_RDWR);
   int regularFd3 = open("extent_test_reg3", O_CREATE | O_RDWR);
   int regularFd4 = open("extent_test_reg4", O_CREATE | O_RDWR);
-  struct stat st;
+  struct stat st, st2;
 
   printf(1, "In this test, we are making extent based file with really big string\n");
   //write something in the file
@@ -61,8 +61,8 @@ int main(int argc, char *argv[])
   printStat(&st);
 
   printf(1, "Compare to: Stat info of pointer-based file using same string\n");
-  fstat(regularFd1, &st);
-  printStat(&st);
+  fstat(regularFd1, &st2);
+  printStat(&st2);
  
   printf(1, "\n\n\n");
   printf(1, "Test2: Kind of long string\n");
@@ -76,8 +76,8 @@ int main(int argc, char *argv[])
   printStat(&st);
 
   printf(1, "Compare to: Stat info of pointer-based file using same string\n");
-  fstat(regularFd2, &st);
-  printStat(&st);
+  fstat(regularFd2, &st2);
+  printStat(&st2);
  
   printf(1, "\n\n\n");
   printf(1, "Test3: long string\n");
@@ -91,8 +91,8 @@ write(regularFd3, prompt3, strlen(prompt3));
   printStat(&st);
 
   printf(1, "Compare to: Stat info of pointer-based file using same string\n");
-  fstat(regularFd3, &st);
-  printStat(&st);
+  fstat(regularFd3, &st2);
+  printStat(&st2);
 
 
   printf(1, "\n\n\n");
@@ -108,8 +108,8 @@ write(regularFd3, prompt3, strlen(prompt3));
   printStat(&st);
 
   printf(1, "Compare to: Stat info of pointer-based file using same string\n");
-  fstat(regularFd4, &st);
-  printStat(&st);
+  fstat(regularFd4, &st2);
+  printStat(&st2);
   
   close(fd1);
 close(fd2);
@@ -123,4 +123,9 @@ close(regularFd4);
 
 exit();
 }
+
+
+
+
+
 
