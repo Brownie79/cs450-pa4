@@ -432,6 +432,30 @@ static uint bmap(struct inode *ip, uint bn){
 
 }
 
+//Each addr[] is 4 byte, first 3byte for pointer and last 1 byte for length.
+
+uint
+toAddr(uint pointer, uint length)
+{
+  return ((pointer <<8) | length);
+}
+
+//0xff = 00000000 00000000 00000000 11111111
+//pointer is first 3 byte.
+uint
+getPtr(uint addr)
+{
+  return ((addr & ~0xff) >> 8);
+}
+//length is last 1 byte.
+uint
+getSize(uint addr)
+{
+  return (addr & 0xff);
+}
+
+
+
 // Truncate inode (discard contents).
 // Only called when the inode has no links
 // to it (no directory entries referring to it)

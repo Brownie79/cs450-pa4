@@ -56,3 +56,8 @@ struct dirent {
   char name[DIRSIZ];
 };
 
+
+uint toAddr(uint pointer, uint size);
+uint getPtr(uint addr);
+uint getSize(uint addr);
+

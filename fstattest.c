@@ -39,7 +39,7 @@ int main(int argc, char *argv[]){
   int pid = fork();
   if (pid == 0){
     printf(1, "Output from stat: \n");
-    char * args[] = {"stat", "fstat_test_file", NULL};
+    char * args[] = {"stat", "fstat_test_file", 0};
     exec(args[0], args);
     exit();
   } else {

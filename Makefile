@@ -176,7 +176,7 @@ UPROGS=\
 	_zombie\
 	_PA4\
 	_extenttests\
-	_fstat_test\
+	_fstattest\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
